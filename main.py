@@ -8,7 +8,7 @@ from telegram.error import BadRequest
 # CONFIG
 # -----------------------------
 BOT_TOKEN = "8392213332:AAE8vq4X1GbmuOmmX6Hdix7CUwTvAtb3iQ0"
-ADMIN_ID = 866048927           # Your Telegram ID
+ADMIN_ID = 8032922682           # Your Telegram ID
 CHANNEL_USERNAME = "@salaryget"
 DATA_FILE = "data.json"
 # -----------------------------
@@ -87,9 +87,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     data = load_data()
 
+    # Initialize missing fields for safety
     if user_id not in data:
         data[user_id] = {"name": query.from_user.first_name, "referrals": [], "salary": 0, "activated": False}
-        save_data(data)
+    else:
+        # Ensure all fields exist
+        data[user_id]["activated"] = data[user_id].get("activated", False)
+        data[user_id]["salary"] = data[user_id].get("salary", 0)
+        data[user_id]["referrals"] = data[user_id].get("referrals", [])
+    save_data(data)
 
     # -----------------------------
     # Done button after joining channel
@@ -117,7 +123,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Add salary to referrer if exists
             ref_id = data[user_id].get("referrer")
             if ref_id and ref_id in data:
-                data[ref_id]["salary"] += 1
+                data[ref_id]["salary"] = data[ref_id].get("salary", 0) + 1
                 if "referrals" not in data[ref_id]:
                     data[ref_id]["referrals"] = []
                 if user_id not in data[ref_id]["referrals"]:
@@ -132,19 +138,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # -----------------------------
-    # Main Menu Buttons
-    # -----------------------------
     # Ensure user is activated before accessing features
-    if not data[user_id]["activated"]:
+    # -----------------------------
+    if not data[user_id].get("activated", False):
         await query.edit_message_text(
             f"⚠️ You must join {CHANNEL_USERNAME} first to use the bot.\nClick the Join button and then press ✅ Done.",
             reply_markup=join_done_keyboard()
         )
         return
 
-    # MY SALARY
+    # -----------------------------
+    # Main Menu Buttons
+    # -----------------------------
     if query.data == "salary":
-        salary = data[user_id]["salary"]
+        salary = data[user_id].get("salary", 0)
         referral_count = len(data[user_id].get("referrals", []))
         text = (
             f"📊 **Your Salary**\n\n"
@@ -155,7 +162,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_keyboard())
 
-    # INVITE FRIENDS
     elif query.data == "invite":
         referral_link = f"https://t.me/{context.bot.username}?start={user_id}"
         text = (
@@ -166,9 +172,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_keyboard())
 
-    # WITHDRAW
     elif query.data == "withdraw":
-        salary = data[user_id]["salary"]
+        salary = data[user_id].get("salary", 0)
         if salary < 100:
             await query.edit_message_text(
                 "⚠️ You need at least 100 units to withdraw.\nKeep inviting friends to reach the minimum!",
@@ -185,7 +190,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Salary: {salary} units"
             )
 
-    # HELP
     elif query.data == "help":
         help_text = (
             "ℹ️ **SalaryBot Help**\n\n"
@@ -206,7 +210,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(help_text, parse_mode="Markdown", reply_markup=back_keyboard())
 
-    # BACK BUTTON
     elif query.data == "back":
         await query.edit_message_text("📌 **Main Menu:**", parse_mode="Markdown", reply_markup=main_menu_keyboard())
 
