@@ -44,23 +44,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     choice = query.data
 
-    # ---------------- JOIN CHANNEL ----------------
-    if choice == "joined":
-        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
-        if member.status in ["member", "administrator", "creator"]:
-            data["joined_channel"] = True
-            save_data(load_data())
-            await query.edit_message_text(
-                f"✅ You have successfully joined the channel!\n\n🏠 *Main Menu*:",
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=main_menu()
-            )
-        else:
-            await query.edit_message_text(
-                "⚠️ You must join the channel before continuing.",
-                reply_markup=join_keyboard()
-            )
-        return
+# ---------------- JOIN CHANNEL ----------------
+if choice == "joined":
+    member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
+    if member.status in ["member", "administrator", "creator"]:
+        data["joined_channel"] = True
+
+        # Give coins to referrer if exists and not yet counted
+        if "referred_by" in data:
+            ref_id = data["referred_by"]
+            ref_data = ensure_user(ref_id, f"User{ref_id}")
+            if "referrer_counted" not in ref_data:
+                ref_data["referrer_counted"] = []
+            if user_id in ref_data.get("referrer_counted", []):
+                ref_data["coins"] += REFERRAL_REWARD
+                # Remove from list to prevent double addition
+                ref_data["referrer_counted"].remove(user_id)
+
+        save_data(load_data())
+        await query.edit_message_text(
+            "✅ Thank you for joining the channel!\n\n🏠 Main Menu:",
+            reply_markup=main_menu()
+        )
+    else:
+        await query.edit_message_text(
+            "⚠️ You must join the channel before continuing.",
+            reply_markup=join_keyboard()
+        )
+    return
 
     # ---------------- BACK BUTTON ----------------
     if choice == "back":
