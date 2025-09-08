@@ -1,17 +1,33 @@
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
-from data_handler import ensure_user, load_data, save_data
+from data_handler import ensure_user, load_data, save_data, REFERRAL_REWARD, MIN_WITHDRAW
 from inline_buttons.menu_buttons import main_menu, back_button, join_keyboard
 from telegram.constants import ParseMode
 
-REFERRAL_REWARD = 2.5
-MIN_WITHDRAW = 100
-CHANNEL_USERNAME = "@salaryget"
+# ---------------- JOIN CHANNEL PROMPT ----------------
+async def send_join_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, username: str):
+    """
+    Sends the professional join channel prompt when the user has not joined yet.
+    """
+    welcome_text = (
+        f"👋 Welcome *{username}*!\n\n"
+        f"📢 This is *SalaryBot*, a professional referral-based system where you earn a monthly salary.\n\n"
+        f"💰 *How it works:*\n"
+        f"- 1 referral = {REFERRAL_REWARD} coins (₹{REFERRAL_REWARD})\n"
+        f"- Salary is calculated monthly.\n"
+        f"- Coins = Rupees (1 coin = ₹1)\n\n"
+        f"✅ To start, join our official channel below:"
+    )
+    await update.message.reply_text(
+        welcome_text,
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=join_keyboard()
+    )
 
 # ---------------- BUTTON HANDLER ----------------
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Handles all inline button clicks.
+    Handles all inline buttons clicks: main menu, join, back, salary, refer, withdraw, leaderboard, info.
     """
     query = update.callback_query
     await query.answer()
@@ -25,12 +41,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---------------- JOIN CHANNEL ----------------
     if choice == "joined":
-        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
+        member = await context.bot.get_chat_member("@salaryget", user.id)
         if member.status in ["member", "administrator", "creator"]:
             data["joined_channel"] = True
-            save_data(data)
+            save_data(load_data())
             await query.edit_message_text(
-                "✅ Thank you for joining the channel!\n\nMain Menu:",
+                "✅ Thank you for joining the channel!\n\n🏠 Main Menu:",
                 reply_markup=main_menu()
             )
         else:
@@ -42,7 +58,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---------------- BACK BUTTON ----------------
     if choice == "back":
-        await query.edit_message_text("🏠 Main Menu:", reply_markup=main_menu())
+        await query.edit_message_text(
+            "🏠 Main Menu:",
+            reply_markup=main_menu()
+        )
         return
 
     # ---------------- SALARY ----------------
@@ -54,7 +73,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👤 Username: @{username}\n"
             f"💰 Current Balance: {coins} coins (₹{coins})\n"
             f"👥 Total Referrals: {refs}\n\n"
-            f"📅 Salary is calculated monthly based on your referrals."
+            f"📅 Salary is calculated monthly based on your referrals.\n"
+            f"Keep inviting friends to increase your monthly earnings!"
         )
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
@@ -66,7 +86,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👥 *Refer & Earn*\n\n"
             f"Invite people using your referral link. Each person who joins and subscribes to our channel "
             f"earns you +{REFERRAL_REWARD} coins.\n\n"
-            f"📌 Your referral link:\n{ref_link}"
+            f"📌 Your referral link:\n{ref_link}\n\n"
+            f"💡 More referrals = higher monthly salary!"
         )
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
@@ -79,7 +100,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🏦 *Withdraw Section*\n\n"
                 f"⚠️ Your balance: {coins} coins.\n"
                 f"You need at least {MIN_WITHDRAW} coins to withdraw.\n"
-                f"Keep referring friends to increase your monthly salary."
+                f"Keep referring friends to increase your monthly salary!"
             )
         else:
             text = (
@@ -116,35 +137,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
-
-
-# ---------------- LEAVES CHECK ----------------
-async def check_leaves(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Detects when a referral leaves the channel and deducts coins.
-    """
-    if update.chat_member:
-        user = update.chat_member.from_user
-        status = update.chat_member.new_chat_member.status
-        if status == "left":
-            user_id = str(user.id)
-            data = load_data()
-            if user_id in data and data[user_id]["referred_by"]:
-                ref_id = data[user_id]["referred_by"]
-                if ref_id in data:
-                    data[ref_id]["coins"] -= REFERRAL_REWARD
-                    if user_id in data[ref_id]["referrals"]:
-                        data[ref_id]["referrals"].remove(user_id)
-                    save_data(data)
-                    try:
-                        await context.bot.send_message(
-                            chat_id=int(ref_id),
-                            text=f"⚠️ Your referral @{user.username or user_id} has left the channel.\n"
-                                 f"-{REFERRAL_REWARD} coins deducted.\n"
-                                 f"New balance: {data[ref_id]['coins']} coins."
-                        )
-                    except:
-                        pass
 
 # ---------------- CALLBACK HANDLER ----------------
 def get_callback_handler():
