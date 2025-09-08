@@ -33,17 +33,35 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def ensure_user(user_id, username):
+def ensure_user(user_id, username=None):
     data = load_data()
     if str(user_id) not in data:
         data[str(user_id)] = {
-            "username": username or "",
-            "coins": 0.0,
+            "name": username or "UNKNOWN",
             "referrals": [],
-            "referred_by": None,
+            "salary": 0,
+            "coins": 0,
+            "activated": False,
+            "referred_by": None
         }
-        save_data(data)
-    return data
+    else:
+        # 🛠 Ensure all fields exist (auto-repair missing keys)
+        user = data[str(user_id)]
+        if "name" not in user:
+            user["name"] = username or "UNKNOWN"
+        if "referrals" not in user:
+            user["referrals"] = []
+        if "salary" not in user:
+            user["salary"] = 0
+        if "coins" not in user:
+            user["coins"] = 0
+        if "activated" not in user:
+            user["activated"] = False
+        if "referred_by" not in user:
+            user["referred_by"] = None
+
+    save_data(data)
+    return data[str(user_id)]
 
 # ---------------- UI ----------------
 def main_menu():
