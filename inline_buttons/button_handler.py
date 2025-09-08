@@ -2,14 +2,16 @@ from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu, back_button, join_keyboard
+from telegram.constants import ParseMode
 
 REFERRAL_REWARD = 2.5
 MIN_WITHDRAW = 100
+CHANNEL_USERNAME = "@salaryget"
 
 # ---------------- BUTTON HANDLER ----------------
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Handles all inline buttons clicks.
+    Handles all inline button clicks.
     """
     query = update.callback_query
     await query.answer()
@@ -23,10 +25,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---------------- JOIN CHANNEL ----------------
     if choice == "joined":
-        member = await context.bot.get_chat_member("@salaryget", user.id)
+        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
         if member.status in ["member", "administrator", "creator"]:
             data["joined_channel"] = True
-            save_data(load_data())
+            save_data(data)
             await query.edit_message_text(
                 "✅ Thank you for joining the channel!\n\nMain Menu:",
                 reply_markup=main_menu()
@@ -54,7 +56,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👥 Total Referrals: {refs}\n\n"
             f"📅 Salary is calculated monthly based on your referrals."
         )
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_button())
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
 
     # ---------------- REFER & EARN ----------------
@@ -66,7 +68,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"earns you +{REFERRAL_REWARD} coins.\n\n"
             f"📌 Your referral link:\n{ref_link}"
         )
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_button())
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
 
     # ---------------- WITHDRAW ----------------
@@ -86,7 +88,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Balance: {coins} coins.\n"
                 f"📌 Contact admin to claim your payout."
             )
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_button())
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
 
     # ---------------- LEADERBOARD ----------------
@@ -96,7 +98,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "🏆 *Top 10 Users*\n\n"
         for i, (uid, udata) in enumerate(top_users, start=1):
             text += f"{i}. {udata.get('name','Unknown')} — {udata.get('coins',0)} coins\n"
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_button())
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
 
     # ---------------- INFO / HELP ----------------
@@ -112,8 +114,37 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"- Salary is calculated monthly\n"
             f"Stay active, invite friends, and grow your earnings!"
         )
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=back_button())
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
+
+
+# ---------------- LEAVES CHECK ----------------
+async def check_leaves(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Detects when a referral leaves the channel and deducts coins.
+    """
+    if update.chat_member:
+        user = update.chat_member.from_user
+        status = update.chat_member.new_chat_member.status
+        if status == "left":
+            user_id = str(user.id)
+            data = load_data()
+            if user_id in data and data[user_id]["referred_by"]:
+                ref_id = data[user_id]["referred_by"]
+                if ref_id in data:
+                    data[ref_id]["coins"] -= REFERRAL_REWARD
+                    if user_id in data[ref_id]["referrals"]:
+                        data[ref_id]["referrals"].remove(user_id)
+                    save_data(data)
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(ref_id),
+                            text=f"⚠️ Your referral @{user.username or user_id} has left the channel.\n"
+                                 f"-{REFERRAL_REWARD} coins deducted.\n"
+                                 f"New balance: {data[ref_id]['coins']} coins."
+                        )
+                    except:
+                        pass
 
 # ---------------- CALLBACK HANDLER ----------------
 def get_callback_handler():
