@@ -1,0 +1,7 @@
+# config.py
+
+BOT_TOKEN = "8392213332:AAE8vq4X1GbmuOmmX6Hdix7CUwTvAtb3iQ0"
+CHANNEL_USERNAME = "@salaryget"
+REFERRAL_REWARD = 2.5
+MIN_WITHDRAW = 100
+DATA_FILE = "data.json"
