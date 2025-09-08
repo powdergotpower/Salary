@@ -1,8 +1,11 @@
+# inline_buttons/button_handler.py
+
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
-from data_handler import ensure_user, load_data, save_data, REFERRAL_REWARD, MIN_WITHDRAW
+from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu, back_button, join_keyboard
 from telegram.constants import ParseMode
+from config import REFERRAL_REWARD, MIN_WITHDRAW, CHANNEL_USERNAME
 
 # ---------------- JOIN CHANNEL PROMPT ----------------
 async def send_join_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, username: str):
@@ -24,6 +27,7 @@ async def send_join_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, u
         reply_markup=join_keyboard()
     )
 
+
 # ---------------- BUTTON HANDLER ----------------
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -41,7 +45,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---------------- JOIN CHANNEL ----------------
     if choice == "joined":
-        member = await context.bot.get_chat_member("@salaryget", user.id)
+        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
         if member.status in ["member", "administrator", "creator"]:
             data["joined_channel"] = True
             save_data(load_data())
