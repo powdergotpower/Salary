@@ -7,25 +7,27 @@ from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu, back_button, join_keyboard
 from config import REFERRAL_REWARD, MIN_WITHDRAW, CHANNEL_USERNAME
 
+
 # ---------------- JOIN CHANNEL PROMPT ----------------
 async def send_join_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, username: str):
     """
     Sends a professional welcome message prompting the user to join the channel.
     """
     welcome_text = (
-        f"👋 Welcome *{username}*!\n\n"
-        f"📢 This is *SalaryBot*, a professional referral-based system.\n"
+        f"👋 *Hello {username}!* \n\n"
+        f"📢 Welcome to *SalaryBot* – a professional referral-based salary system.\n\n"
         f"💰 *How it works:*\n"
-        f"- 1 referral = {REFERRAL_REWARD} coins (₹{REFERRAL_REWARD})\n"
-        f"- Salary is calculated monthly.\n"
-        f"- Coins = Rupees (1 coin = ₹1)\n\n"
-        f"✅ To start, join our official channel below:"
+        f"• 1 referral = {REFERRAL_REWARD} coins (₹{REFERRAL_REWARD})\n"
+        f"• Salary is calculated monthly\n"
+        f"• Coins = Rupees (1 coin = ₹1)\n\n"
+        f"✅ To start, please join our official channel below:"
     )
     await update.message.reply_text(
         welcome_text,
         parse_mode=ParseMode.MARKDOWN,
         reply_markup=join_keyboard()
     )
+
 
 # ---------------- INLINE BUTTON HANDLER ----------------
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -49,7 +51,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["joined_channel"] = True
             save_data(load_data())
             await query.edit_message_text(
-                "✅ Thank you for joining the channel!\n\n🏠 Main Menu:",
+                f"✅ You have successfully joined the channel!\n\n🏠 *Main Menu*:",
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=main_menu()
             )
         else:
@@ -62,7 +65,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ---------------- BACK BUTTON ----------------
     if choice == "back":
         await query.edit_message_text(
-            "🏠 Main Menu:",
+            f"🏠 *Main Menu*\n\n"
+            f"💰 Check your salary, referrals, leaderboard, and more using the buttons below.",
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=main_menu()
         )
         return
@@ -70,14 +75,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ---------------- SALARY ----------------
     if choice == "salary":
         coins = data["coins"]
-        refs = len(data["referrals"])
+        refs = len(data.get("referrals", []))
         text = (
-            f"💼 *My Salary Information*\n\n"
+            f"💼 *My Salary Info*\n\n"
             f"👤 Username: @{username}\n"
             f"💰 Current Balance: {coins} coins (₹{coins})\n"
             f"👥 Total Referrals: {refs}\n\n"
             f"📅 Salary is calculated monthly based on your referrals.\n"
-            f"Keep inviting friends to increase your monthly earnings!"
+            f"💡 Keep inviting friends to increase your monthly earnings!"
         )
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
@@ -87,8 +92,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ref_link = f"https://t.me/{context.bot.username}?start={user_id}"
         text = (
             f"👥 *Refer & Earn*\n\n"
-            f"Invite people using your referral link. Each person who joins and subscribes to our channel "
-            f"earns you +{REFERRAL_REWARD} coins.\n\n"
+            f"Invite people using your referral link. Each person who joins the channel earns you +{REFERRAL_REWARD} coins.\n\n"
             f"📌 Your referral link:\n{ref_link}\n\n"
             f"💡 More referrals = higher monthly salary!"
         )
@@ -103,13 +107,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🏦 *Withdraw Section*\n\n"
                 f"⚠️ Your balance: {coins} coins.\n"
                 f"You need at least {MIN_WITHDRAW} coins to withdraw.\n"
-                f"Keep referring friends to increase your monthly salary!"
+                f"💡 Keep referring friends to increase your monthly salary!"
             )
         else:
             text = (
                 f"🏦 *Withdraw Section*\n\n"
                 f"✅ Eligible for withdrawal!\n"
-                f"Balance: {coins} coins.\n"
+                f"Balance: {coins} coins\n"
                 f"📌 Contact admin to claim your payout."
             )
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
@@ -125,21 +129,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
 
-    # ---------------- INFO / HELP ----------------
+    # ---------------- INFO ----------------
     if choice == "info":
         text = (
             f"ℹ️ *About SalaryBot*\n\n"
             f"SalaryBot is a professional referral-based salary system.\n"
             f"Invite friends, earn coins, and get monthly payouts.\n\n"
             f"📌 Rules:\n"
-            f"- 1 referral = {REFERRAL_REWARD} coins = ₹{REFERRAL_REWARD}\n"
-            f"- Coins = Rupees (1 coin = ₹1)\n"
-            f"- Minimum withdrawal = {MIN_WITHDRAW} coins\n"
-            f"- Salary is calculated monthly\n"
-            f"Stay active, invite friends, and grow your earnings!"
+            f"• 1 referral = {REFERRAL_REWARD} coins = ₹{REFERRAL_REWARD}\n"
+            f"• Coins = Rupees (1 coin = ₹1)\n"
+            f"• Minimum withdrawal = {MIN_WITHDRAW} coins\n"
+            f"• Salary is calculated monthly\n"
+            f"💡 Stay active, invite friends, and grow your earnings!"
         )
         await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button())
         return
+
 
 # ---------------- CALLBACK HANDLER ----------------
 def get_callback_handler() -> CallbackQueryHandler:
@@ -148,7 +153,8 @@ def get_callback_handler() -> CallbackQueryHandler:
     """
     return CallbackQueryHandler(button_handler)
 
-# ---------------- OPTIONAL: CHAT MEMBER LEAVE HANDLER ----------------
+
+# ---------------- CHAT MEMBER LEAVE HANDLER ----------------
 async def check_leaves(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Detects when a user leaves the channel and reduces coins from referrer.
@@ -163,6 +169,9 @@ async def check_leaves(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if user_data and user_data.get("referred_by"):
                 ref_id = user_data["referred_by"]
                 ref_data = data.get(ref_id)
-                if ref_data and ref_data.get("coins", 0) >= 1:
-                    ref_data["coins"] -= 1
+                if ref_data and ref_data.get("coins", 0) >= REFERRAL_REWARD:
+                    ref_data["coins"] -= REFERRAL_REWARD
+                    # Remove this user from counted referrals
+                    if "referrer_counted" in ref_data and user_id in ref_data["referrer_counted"]:
+                        ref_data["referrer_counted"].remove(user_id)
                     save_data(data)
