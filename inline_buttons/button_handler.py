@@ -14,7 +14,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = query.from_user
     user_id = str(user.id)
     username = user.username or f"User{user.id}"
+
+    # Load all user data
+    data_all = load_data()
+    # Ensure current user exists in data
     data = ensure_user(user_id, username)
+
     choice = query.data
 
     # ------------------ JOINED BUTTON ------------------ #
@@ -30,7 +35,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ref_data = ensure_user(ref_id, f"User{ref_id}")
                 ref_data["salary"] = ref_data.get("salary", 0) + REFERRAL_REWARD
 
-            save_data(load_data())  # Save updated data
+            # Save all updated data
+            save_data(data_all)
 
         # Show main menu
         await query.edit_message_text(
