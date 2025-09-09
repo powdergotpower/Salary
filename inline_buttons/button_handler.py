@@ -1,12 +1,12 @@
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from telegram.constants import ParseMode
-from data_handler import ensure_user, load_data
+from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu, back_button
 from inline_buttons import referral_handler, salary_handler
 from config import MIN_WITHDRAW, REFERRAL_REWARD
 
-
+# ------------------ Callback for inline buttons ------------------ #
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -17,12 +17,31 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = ensure_user(user_id, username)
     choice = query.data
 
-    # ✅ JOINED BUTTON
-    if choice == "check_joined":
-        await referral_handler.handle_joined(update, context, user, data)
+    # ------------------ JOINED BUTTON ------------------ #
+    if choice == "joined":
+        # Only give reward if not already joined
+        if not data.get("joined_channel", False):
+            data["joined_channel"] = True
+            data["salary"] = data.get("salary", 0) + REFERRAL_REWARD  # 2.5 for joining
+
+            # Reward referrer if exists
+            ref_id = data.get("referred_by")
+            if ref_id:
+                ref_data = ensure_user(ref_id, f"User{ref_id}")
+                ref_data["salary"] = ref_data.get("salary", 0) + REFERRAL_REWARD
+
+            save_data(load_data())  # Save updated data
+
+        # Show main menu
+        await query.edit_message_text(
+            "🏠 *Main Menu*\n\n"
+            "You successfully joined! Use the buttons below:",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=main_menu()
+        )
         return
 
-    # ✅ BACK BUTTON
+    # ------------------ BACK BUTTON ------------------ #
     if choice == "back":
         await query.edit_message_text(
             "🏠 *Main Menu*\n\n"
@@ -32,12 +51,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ✅ SALARY
+    # ------------------ SALARY ------------------ #
     if choice == "salary":
         await salary_handler.show_salary(update, context, data, username)
         return
 
-    # ✅ REFER
+    # ------------------ REFER ------------------ #
     if choice == "refer":
         ref_link = f"https://t.me/{context.bot.username}?start={user_id}"
         text = (
@@ -53,12 +72,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ✅ WITHDRAW
+    # ------------------ WITHDRAW ------------------ #
     if choice == "withdraw":
         await salary_handler.withdraw(update, context, data)
         return
 
-    # ✅ LEADERBOARD
+    # ------------------ LEADERBOARD ------------------ #
     if choice == "leaderboard":
         data_all = load_data()
         top_users = sorted(
@@ -78,7 +97,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ✅ INFO
+    # ------------------ INFO ------------------ #
     if choice == "info":
         text = (
             "ℹ️ *About SalaryBot*\n\n"
@@ -99,5 +118,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
+# ------------------ Register callback handler ------------------ #
 def get_callback_handler() -> CallbackQueryHandler:
     return CallbackQueryHandler(button_handler)
