@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from telegram.constants import ParseMode
-from data_handler import ensure_user, load_data, save_data
+from data_handler import load_data, save_data
 from inline_buttons.menu_buttons import main_menu, back_button
 from inline_buttons import referral_handler, salary_handler
 from config import MIN_WITHDRAW, REFERRAL_REWARD
@@ -17,25 +17,44 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Load all user data
     data_all = load_data()
-    # Ensure current user exists in data
-    data = ensure_user(user_id, username)
+
+    # Ensure current user exists in data_all
+    if user_id not in data_all:
+        data_all[user_id] = {
+            "name": username,
+            "salary": 0,
+            "coins": 0,
+            "joined_channel": False,
+            "referred_by": None,
+            "referrer_counted": []
+        }
+
+    data = data_all[user_id]  # Reference to user dict
 
     choice = query.data
 
     # ------------------ JOINED BUTTON ------------------ #
     if choice == "joined":
-        # Only give reward if not already joined
         if not data.get("joined_channel", False):
+            # Mark user as joined
             data["joined_channel"] = True
-            data["salary"] = data.get("salary", 0) + REFERRAL_REWARD  # 2.5 for joining
+            data["salary"] += REFERRAL_REWARD
 
             # Reward referrer if exists
             ref_id = data.get("referred_by")
             if ref_id:
-                ref_data = ensure_user(ref_id, f"User{ref_id}")
-                ref_data["salary"] = ref_data.get("salary", 0) + REFERRAL_REWARD
+                if ref_id not in data_all:
+                    data_all[ref_id] = {
+                        "name": f"User{ref_id}",
+                        "salary": 0,
+                        "coins": 0,
+                        "joined_channel": False,
+                        "referred_by": None,
+                        "referrer_counted": []
+                    }
+                data_all[ref_id]["salary"] += REFERRAL_REWARD
 
-            # Save all updated data
+            # Save updated data
             save_data(data_all)
 
         # Show main menu
