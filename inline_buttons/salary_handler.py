@@ -1,0 +1,40 @@
+from telegram import Update
+from telegram.ext import ContextTypes
+from telegram.constants import ParseMode
+from inline_buttons.menu_buttons import back_button
+from config import MIN_WITHDRAW
+
+async def show_salary(update: Update, context: ContextTypes.DEFAULT_TYPE, data: dict, username: str):
+    coins = data.get("coins", 0)
+    refs = len(data.get("referrals", []))
+    text = (
+        f"💼 *My Salary Info*\n\n"
+        f"👤 Username: @{username}\n"
+        f"💰 Current Balance: {coins} coins (₹{coins})\n"
+        f"👥 Total Referrals: {refs}\n\n"
+        f"📅 Salary is calculated monthly based on your referrals.\n"
+        f"💡 Keep inviting friends to increase your monthly earnings!"
+    )
+    await update.callback_query.edit_message_text(
+        text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button()
+    )
+
+async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE, data: dict):
+    coins = data.get("coins", 0)
+    if coins < MIN_WITHDRAW:
+        text = (
+            f"🏦 *Withdraw Section*\n\n"
+            f"⚠️ Your balance: {coins} coins.\n"
+            f"You need at least {MIN_WITHDRAW} coins to withdraw.\n"
+            f"💡 Keep referring friends to increase your monthly salary!"
+        )
+    else:
+        text = (
+            f"🏦 *Withdraw Section*\n\n"
+            f"✅ Eligible for withdrawal!\n"
+            f"Balance: {coins} coins\n"
+            f"📌 Contact admin to claim your payout."
+        )
+    await update.callback_query.edit_message_text(
+        text, parse_mode=ParseMode.MARKDOWN, reply_markup=back_button()
+    )
