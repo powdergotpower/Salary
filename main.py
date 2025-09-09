@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHa
 from inline_buttons import button_handler, referral_handler
 from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu
-from config import BOT_TOKEN, CHANNEL_LINK
+from config import BOT_TOKEN, CHANNEL_LINK  # Corrected import
 
 
 # /start handler
@@ -30,7 +30,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data(data_all)
 
     # -------- Check if user joined channel --------
-    member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
+    member = await context.bot.get_chat_member(CHANNEL_LINK, user.id)  # Fixed here
     if member.status in ["member", "administrator", "creator"]:
         user_data["joined_channel"] = True
         save_data(data_all)
