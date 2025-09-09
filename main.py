@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHa
 from inline_buttons import button_handler, referral_handler
 from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu
-from config import BOT_TOKEN, CHANNEL_USERNAME
+from config import BOT_TOKEN, CHANNEL_LINK
 
 
 # /start handler
