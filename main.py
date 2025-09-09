@@ -31,7 +31,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # -------- Check if user joined channel --------
     try:
-        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)  # Membership check
+        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
         if member.status in ["member", "administrator", "creator"]:
             user_data["joined_channel"] = True
             save_data(data_all)
@@ -48,3 +48,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # If something goes wrong (bot not admin or channel invalid)
         print(f"Error checking membership: {e}")
         await referral_handler.send_join_prompt(update, context, username)
+
+
+def main():
+    # Build the bot application
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    # Add handlers
+    app.add_handler(CommandHandler("start", start))  # /start command
+    app.add_handler(button_handler.get_callback_handler())  # Inline button callbacks
+    app.add_handler(ChatMemberHandler(referral_handler.check_leaves, ChatMemberHandler.CHAT_MEMBER))  # Track leaves
+
+    print("🤖 SalaryBot is running...")
+    app.run_polling()  # Start polling
+
+
+if __name__ == "__main__":
+    main()
