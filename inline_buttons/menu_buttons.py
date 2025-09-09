@@ -1,5 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from config import CHANNEL_USERNAME
+from config import CHANNEL_LINK  # use CHANNEL_LINK instead of CHANNEL_USERNAME
 
 def main_menu():
     keyboard = [
@@ -17,7 +17,7 @@ def back_button():
 
 def join_keyboard():
     keyboard = [
-        [InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{CHANNEL_USERNAME}")],
+        [InlineKeyboardButton("📢 Join Channel", url=CHANNEL_LINK)],  # updated
         [InlineKeyboardButton("✅ I Joined", callback_data="joined")],
     ]
     return InlineKeyboardMarkup(keyboard)
