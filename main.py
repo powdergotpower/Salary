@@ -5,6 +5,8 @@ from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu
 from config import BOT_TOKEN, CHANNEL_USERNAME
 
+
+# /start handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = str(user.id)
@@ -22,8 +24,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if "referrer_counted" not in ref_data:
                 ref_data["referrer_counted"] = []
             if user_id not in ref_data["referrer_counted"]:
+                # only mark them for later verification
                 ref_data["referrer_counted"].append(user_id)
-            save_data(data_all)
+
+    save_data(data_all)
 
     # -------- Check if user joined channel --------
     member = await context.bot.get_chat_member(CHANNEL_USERNAME, user.id)
@@ -40,13 +44,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send join prompt
         await referral_handler.send_join_prompt(update, context, username)
 
+
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Command handler
+    # /start
     app.add_handler(CommandHandler("start", start))
 
-    # Inline buttons handler
+    # Inline button handler
     app.add_handler(button_handler.get_callback_handler())
 
     # Track channel leaves
@@ -54,6 +59,7 @@ def main():
 
     print("🤖 SalaryBot is running...")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
