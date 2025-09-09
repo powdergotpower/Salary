@@ -1,12 +1,11 @@
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 from telegram.constants import ParseMode
-from data_handler import load_data, save_data
+from data_handler import load_data, save_data, ensure_user
 from inline_buttons.menu_buttons import main_menu, back_button
 from inline_buttons import referral_handler, salary_handler
 from config import MIN_WITHDRAW, REFERRAL_REWARD
 
-# ------------------ Callback for inline buttons ------------------ #
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -15,49 +14,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(user.id)
     username = user.username or f"User{user.id}"
 
-    # Load all user data
+    # Load all data
     data_all = load_data()
-
-    # Ensure current user exists in data_all
-    if user_id not in data_all:
-        data_all[user_id] = {
-            "name": username,
-            "salary": 0,
-            "coins": 0,
-            "joined_channel": False,
-            "referred_by": None,
-            "referrer_counted": []
-        }
-
-    data = data_all[user_id]  # Reference to user dict
+    data = ensure_user(user_id, username)  # Safe now, has all keys
 
     choice = query.data
 
-    # ------------------ JOINED BUTTON ------------------ #
     if choice == "joined":
-        if not data.get("joined_channel", False):
-            # Mark user as joined
+        if not data["joined_channel"]:
             data["joined_channel"] = True
             data["salary"] += REFERRAL_REWARD
 
-            # Reward referrer if exists
             ref_id = data.get("referred_by")
             if ref_id:
-                if ref_id not in data_all:
-                    data_all[ref_id] = {
-                        "name": f"User{ref_id}",
-                        "salary": 0,
-                        "coins": 0,
-                        "joined_channel": False,
-                        "referred_by": None,
-                        "referrer_counted": []
-                    }
-                data_all[ref_id]["salary"] += REFERRAL_REWARD
+                ref_data = ensure_user(ref_id, f"User{ref_id}")
+                ref_data["salary"] += REFERRAL_REWARD
 
-            # Save updated data
             save_data(data_all)
 
-        # Show main menu
         await query.edit_message_text(
             "🏠 *Main Menu*\n\n"
             "You successfully joined! Use the buttons below:",
@@ -66,29 +40,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ------------------ BACK BUTTON ------------------ #
     if choice == "back":
         await query.edit_message_text(
             "🏠 *Main Menu*\n\n"
-            "💰 Check your salary, referrals, leaderboard, and more using the buttons below.",
+            "Use buttons below to navigate:",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=main_menu()
         )
         return
 
-    # ------------------ SALARY ------------------ #
     if choice == "salary":
         await salary_handler.show_salary(update, context, data, username)
         return
 
-    # ------------------ REFER ------------------ #
     if choice == "refer":
         ref_link = f"https://t.me/{context.bot.username}?start={user_id}"
         text = (
-            "👥 *Refer & Earn*\n\n"
-            f"Invite people using your referral link. Each person who joins the channel earns you +{REFERRAL_REWARD} coins.\n\n"
-            f"📌 Your referral link:\n{ref_link}\n\n"
-            "💡 More referrals = higher monthly salary!"
+            f"👥 *Refer & Earn*\n\nInvite people using your referral link. Each person earns you +{REFERRAL_REWARD} coins.\n\n"
+            f"📌 Your referral link:\n{ref_link}"
         )
         await query.edit_message_text(
             text,
@@ -97,14 +66,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ------------------ WITHDRAW ------------------ #
     if choice == "withdraw":
         await salary_handler.withdraw(update, context, data)
         return
 
-    # ------------------ LEADERBOARD ------------------ #
     if choice == "leaderboard":
-        data_all = load_data()
         top_users = sorted(
             data_all.items(),
             key=lambda x: x[1].get("coins", 0),
@@ -122,18 +88,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ------------------ INFO ------------------ #
     if choice == "info":
         text = (
-            "ℹ️ *About SalaryBot*\n\n"
-            "SalaryBot is a professional referral-based salary system.\n"
-            "Invite friends, earn coins, and get monthly payouts.\n\n"
-            "📌 Rules:\n"
-            f"• 1 referral = {REFERRAL_REWARD} coins = ₹{REFERRAL_REWARD}\n"
-            "• Coins = Rupees (1 coin = ₹1)\n"
-            f"• Minimum withdrawal = {MIN_WITHDRAW} coins\n"
-            "• Salary is calculated monthly\n\n"
-            "💡 Stay active, invite friends, and grow your earnings!"
+            f"ℹ️ *About SalaryBot*\n\n"
+            f"• 1 referral = {REFERRAL_REWARD} coins\n"
+            f"• Coins = ₹1 each\n"
+            f"• Minimum withdrawal = {MIN_WITHDRAW}\n"
         )
         await query.edit_message_text(
             text,
@@ -143,6 +103,5 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
-# ------------------ Register callback handler ------------------ #
 def get_callback_handler() -> CallbackQueryHandler:
     return CallbackQueryHandler(button_handler)
