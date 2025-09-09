@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 from data_handler import ensure_user, load_data, save_data
 from inline_buttons.menu_buttons import main_menu, join_keyboard
-from config import REFERRAL_REWARD, CHANNEL_USERNAME
+from config import REFERRAL_REWARD, CHANNEL_LINK
 
 async def send_join_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, username: str):
     welcome_text = (
